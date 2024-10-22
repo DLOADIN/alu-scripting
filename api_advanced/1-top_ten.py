@@ -1,60 +1,44 @@
 #!/usr/bin/python3
-"""
-Module to query Reddit API and get top 10 hot posts of a subreddit
-"""
+"""Script that fetch all hot post for a given subreddit with recursive call."""
+
 import requests
 
+headers = {'User-Agent': 'MyAPI/0.0.1'}
 
-def top_ten(subreddit):
-    """
-    Queries Reddit API and prints the titles of first 10 hot posts
-    listed for a given subreddit.
 
-    Args:
-        subreddit: string - the name of the subreddit to query
+def recurse(subreddit, after="", hot_list=[], page_counter=0):
+    """Return all hot posts in a subreddit."""
 
-    Returns:
-        None if subreddit is invalid,
-        Otherwise prints the titles of the first 10 hot posts
-    """
-    # Reddit API URL
-    url = f"https://www.reddit.com/r/{subreddit}/hot.json"
+    subreddit_url = "https://reddit.com/r/{}/hot.json".format(subreddit)
 
-    # Custom User-Agent to avoid too many requests error
-    headers = {
-        'User-Agent': 'linux:0.1:v1.0 (by /u/your_username)'
-    }
+    parameters = {'limit': 100, 'after': after}
+    response = requests.get(subreddit_url, headers=headers, params=parameters)
 
-    # Parameters to limit number of posts and avoid redirects
-    params = {
-        'limit': 10
-    }
+    if response.status_code == 200:
+        json_data = response.json()
+        # get the 'after' value from the response to pass it on the request
 
-    try:
-        # Make GET request to Reddit API
-        response = requests.get(
-            url,
-            headers=headers,
-            params=params,
-            allow_redirects=False
-        )
+        # get title and append it to the hot_list
+        for child in json_data.get('data').get('children'):
+            title = child.get('data').get('title')
+            hot_list.append(title)
 
-        # Check if subreddit exists
-        if response.status_code == 404:
-            print(None)
-            return
-        # Check if other errors occurred
-        if response.status_code != 200:
-            print(None)
-            return
+        # variable after indicates if there is data on the next pagination
+        # on the reddit API after holds a unique name for that subreddit page.
+        # if it is None it indicates it is the last page.
+        after = json_data.get('data').get('after')
+        if after is not None:
 
-        # Parse response JSON
-        results = response.json()
-        posts = results.get('data', {}).get('children', [])
+            page_counter += 1
+            # print(len(hot_list))
+            return recurse(subreddit, after=after,
+                           hot_list=hot_list, page_counter=page_counter)
+        else:
+            return hot_list
 
-        # Print first 10 post titles
-        for post in posts:
-            print(post.get('data', {}).get('title'))
+    else:
+        return None
 
-    except Exception:
-        print(None)
+
+if __name__ == '__main__':
+    print(recurse("zerowastecz"))
