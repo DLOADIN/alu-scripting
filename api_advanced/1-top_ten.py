@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 """Displays the titles of 10 hot posts listed for a subreddit
 """
 
